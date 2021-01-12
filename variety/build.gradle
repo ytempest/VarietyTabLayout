@@ -1,10 +1,9 @@
-apply plugin: 'com.android.application'
+apply plugin: 'com.android.library'
 
 android {
     compileSdkVersion versions.compileSdk
 
     defaultConfig {
-        applicationId "com.ytempest.varietylib"
         minSdkVersion versions.minSdk
         targetSdkVersion versions.compileSdk
 
@@ -12,6 +11,7 @@ android {
         versionName versions.versionName
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles 'consumer-rules.pro'
     }
 
     buildTypes {
@@ -24,15 +24,5 @@ android {
 }
 
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.2'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
-
-    implementation deps.android.constraint
-    implementation deps.android.support_v4
-    implementation deps.android.appcompat_v7
-
-    implementation project(path: ':variety')
+    compileOnly deps.android.support_v4
 }

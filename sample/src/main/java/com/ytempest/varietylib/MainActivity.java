@@ -1,4 +1,4 @@
-package com.ytempest.variety;
+package com.ytempest.varietylib;
 
 
 import android.os.Bundle;
