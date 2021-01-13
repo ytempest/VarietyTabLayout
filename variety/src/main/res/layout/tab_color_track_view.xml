@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.ytempest.variety.ColorTrackTextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:paddingHorizontal="16dp"
+    android:textSize="16sp"
+    app:change_color="#FF3397F6"
+    app:origin_color="#FF838383" />
