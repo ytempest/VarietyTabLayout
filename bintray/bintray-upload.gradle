@@ -1,0 +1,180 @@
+apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'com.jfrog.bintray'
+
+// 需要发布的项目配置
+def projectConfigs = getProjectUploadConfigs()
+// 核心的发布配置
+def coreConfigs = getCoreUploadConfigs()
+// JFrog Bintray用户信息配置
+def userConfigs = getBintrayUserConfigs()
+
+// 发布的组织Id，如['com.jakewharton:butterknife:8.5.1']中的[com.jakewharton]
+// 这里配置需要和pom.project.groupId一致
+group = coreConfigs["GROUP"]
+
+// 项目版本，如['com.jakewharton:butterknife:8.5.1']中的[8.5.1]
+// 这个需要和pom.project.version、pkg.version.version这两个的配置一致
+version = coreConfigs["VERSION"]
+
+install {
+    repositories.mavenInstaller {
+        // 生成pom.xml和参数，这些参数会记录在pom文件中
+        pom.project {
+            // 可选，项目名称，会记录在仓库的pom文件中，暂时不确定被用于何处
+            name projectConfigs["POM_NAME"]
+            // 项目发布的id，如['com.jakewharton:butterknife:8.5.1']中的[butterknife]
+            artifactId projectConfigs["POM_ARTIFACT_ID"]
+            // 项目版本，这个最好和bintray.pkg.version中设置的版本一致。如果不一致，那么会优先使用在
+            // bintray.pkg.version中设置的版本，然后和这个版本号会记录在仓库的pom文件中
+            version coreConfigs["VERSION"]
+            // 项目打包类型：aar或者jar
+            packaging projectConfigs["POM_PACKAGING"]
+            // 发布的组织Id，如['com.jakewharton:butterknife:8.5.1']中的[com.jakewharton]
+            groupId coreConfigs["GROUP"]
+            // 可选，项目描述。
+            description coreConfigs["POM_DESCRIPTION"]
+            // 项目主页
+            url coreConfigs["SITE_URL"]
+
+            // 软件开源协议，现在一般都是Apache License2.0吧
+            licenses {
+                license {
+                    name coreConfigs["POM_LICENCE_NAME"]
+                    url coreConfigs["POM_LICENCE_URL"]
+                }
+            }
+
+            //填写开发者基本信息
+            developers {
+                developer {
+                    id coreConfigs["POM_DEVELOPER_ID"] // 开发者的id
+                    name coreConfigs["POM_DEVELOPER_NAME"] // 开发者名字
+                    email coreConfigs["POM_DEVELOPER_EMAIL"] // 开发者邮箱
+                }
+            }
+
+            scm {
+                connection coreConfigs["GITHUB_URL"] // Git仓库地址
+                developerConnection coreConfigs["GITHUB_URL"] // Git仓库地址
+                url coreConfigs["SITE_URL"] // 项目主页
+            }
+        }
+    }
+}
+
+bintray {
+    // Bintray的用户名
+    user = userConfigs["USER"]
+    // Bintray用户的ApiKey
+    key = userConfigs["APIKEY"]
+
+    // 这个不能删，配置后才会上传项目
+    configurations = ['archives']
+
+    // 如果项目的当前版本已经存在，是否覆盖
+    override Boolean.valueOf(coreConfigs["BINTRAY_OVERRIDE"])
+    pkg {
+        // Bintray上的仓库名
+        repo = coreConfigs["BINTRAY_REPOSITORY"]
+        //Bintray的组织id，即用户名
+        userOrg = coreConfigs["BINTRAY_USER"]
+        // 发布到Bintray上的项目名字，即在Bintray个人仓库中显示的名称
+        name = projectConfigs["POM_NAME"]
+        websiteUrl = coreConfigs["SITE_URL"]
+        vcsUrl = coreConfigs["VCS_URL"]
+        // 是否是公开项目
+        publish = Boolean.valueOf(coreConfigs["BINTRAY_PUBLISH"])
+        // 发布项目的证书数组，可以指定多个证书，如果是第一次发布要加上这个才会在Bintray自动创建项目
+        licenses = [coreConfigs["BINTRAY_LICENSES"]]
+        version {
+            version coreConfigs["VERSION"]
+            desc = coreConfigs["POM_DESCRIPTION"]
+        }
+    }
+}
+
+// afterEvaluate表示所有的模块都已经配置完了，可以准备执行task
+afterEvaluate { project ->
+    // 修正打包JavaDoc时出现的GBK不可映射编码问题
+    tasks.withType(Javadoc) {
+        options {
+            encoding "UTF-8"
+            charSet 'UTF-8'
+            links "http://docs.oracle.com/javase/7/docs/api"
+        }
+    }
+
+    // 打包项目的JavaDoc文档和源码的Jar
+    if (project.getPlugins().hasPlugin('com.android.application') ||
+            project.getPlugins().hasPlugin('com.android.library')) {//打包Android Library库文档和源码
+        task androidJavadocs(type: Javadoc) {
+            source = android.sourceSets.main.java.source
+            classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+        }
+
+        task androidJavadocsJar(type: Jar, dependsOn: androidJavadocs) {
+            classifier = 'javadoc'
+            from androidJavadocs.destinationDir
+        }
+
+        task androidSourcesJar(type: Jar) {
+            classifier = 'sources'
+            from android.sourceSets.main.java.source
+        }
+
+    } else {//打包Java Library文档和源码
+        task sourcesJar(type: Jar, dependsOn: classes) {
+            classifier = 'sources'
+            from sourceSets.main.allSource
+        }
+
+        task javadocJar(type: Jar, dependsOn: javadoc) {
+            classifier = 'javadoc'
+            from javadoc.destinationDir
+        }
+    }
+
+
+    // 指定上传源码和JavaDoc的jar文件
+    artifacts {
+        if (project.getPlugins().hasPlugin('com.android.application') ||
+                project.getPlugins().hasPlugin('com.android.library')) {
+            archives androidSourcesJar
+            archives androidJavadocsJar
+        } else {
+            archives sourcesJar
+            archives javadocJar
+        }
+    }
+}
+
+def getProjectUploadConfigs() {
+    def filePath = "bintray-upload.properties"
+    def projectConfigFile = project.file(filePath)
+    if (!projectConfigFile.exists()) {
+        throw new IllegalAccessException("Please setting the configuration of project " + project.name + " in " + projectConfigFile.path)
+    }
+    Properties configs = new Properties()
+    configs.load(projectConfigFile.newDataInputStream())
+    return configs
+}
+
+def getCoreUploadConfigs() {
+    def filePath = "bintray/core.properties"
+    def file = rootProject.file(filePath)
+    Properties configs = new Properties()
+    configs.load(file.newDataInputStream())
+    return configs
+}
+
+
+def getBintrayUserConfigs() {
+    def filePath = "bintray/user.properties"
+    def file = rootProject.file(filePath)
+    if (!file.exists()) {
+        throw new IllegalAccessException("Please setting [USER, APIKEY] that from jfrog bintray in " + file.path)
+    }
+    Properties configs = new Properties()
+    configs.load(file.newDataInputStream())
+    return configs
+}

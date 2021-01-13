@@ -1,4 +1,5 @@
 apply plugin: 'com.android.library'
+apply from: rootProject.file('bintray/bintray-upload.gradle')
 
 android {
     compileSdkVersion versions.compileSdk
