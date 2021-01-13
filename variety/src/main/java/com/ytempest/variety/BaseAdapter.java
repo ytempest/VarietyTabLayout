@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * @param <Data> data type of tab in {@link VarietyTabLayout}, this data type need keep consistent
- *               with {@link ITabDecorator<Data>} and {@link BaseAdapter#getTabDecorator()}
+ *               with {@link ITabDecorator} and {@link BaseAdapter#getTabDecorator()}
  * @author ytempest
  * @since 2021/1/11
  */
