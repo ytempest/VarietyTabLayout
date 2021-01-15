@@ -243,9 +243,16 @@ public class VarietyTabLayout extends HorizontalScrollView {
          */
         private void fixScrollThresholdControl(int position) {
             if (lastPosition < position) { // 向右滚动
-                mVarietyTabLayout.dispatchOnPageScrolled(lastPosition, position, 1);
+                final int startPosition = lastPosition;
+                for (int passPos = startPosition; passPos < position; ++passPos) {
+                    mVarietyTabLayout.dispatchOnPageScrolled(passPos, passPos + 1, 1);
+                }
+
             } else if (lastPosition > position) { // 向左滚动
-                mVarietyTabLayout.dispatchOnPageScrolled(lastPosition, lastPosition + 1, 0);
+                final int endPosition = lastPosition;
+                for (int passPos = endPosition; passPos >= position; --passPos) {
+                    mVarietyTabLayout.dispatchOnPageScrolled(passPos, passPos + 1, 0);
+                }
             }
             lastPosition = position;
         }
