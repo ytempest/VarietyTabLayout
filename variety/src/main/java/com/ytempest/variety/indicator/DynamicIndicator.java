@@ -43,7 +43,7 @@ public class DynamicIndicator implements IIndicatorDecorator {
 
         params.leftMargin = originLeftMargin + totalOffset;
         params.width = currentTab.getWidth() - originLeftMargin - originRightMargin + widthChangeRange;
-        params.height = currentTab.getHeight();
+        params.height = currentTab.getHeight() - params.topMargin - params.bottomMargin;
         indicator.setLayoutParams(params);
     }
 }

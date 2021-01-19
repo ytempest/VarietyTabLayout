@@ -141,30 +141,30 @@ public class VarietyTabLayout extends HorizontalScrollView {
         tab.setOnClickListener(mTabClickListener);
     }
 
-    private void dispatchOnPageScrolled(int position, int nextPosition, float positionOffset) {
-        // 分发滚动事件给Tab，让Tab处理自身的UI状态变换
-        mTabDecorator.onNextTabOffset(mTabGroup.getTabAt(nextPosition), positionOffset);
-        mTabDecorator.onCurrentTabOffset(mTabGroup.getTabAt(position), positionOffset);
+    private void dispatchOnPageScrolled(int position, float positionOffset) {
+        if (isPositionLegal(position)) {
+            // 分发滚动事件给Tab，让Tab处理自身的UI状态变换
+            final int nextPosition = Math.min(position + 1, mTabGroup.getTabCount() - 1);
+            final View nextTab = mTabGroup.getTabAt(nextPosition);
+            final View currentTab = mTabGroup.getTabAt(position);
+            mTabDecorator.onNextTabOffset(nextTab, positionOffset);
+            mTabDecorator.onCurrentTabOffset(currentTab, positionOffset);
 
-        updateIndicatorLocation(position, nextPosition, positionOffset);
+            updateIndicatorLocation(currentTab, nextTab, positionOffset);
 
-        scrollTo(calculateScrollXForTab(position, nextPosition, positionOffset), 0);
+            scrollTo(calculateScrollXForTab(currentTab, nextTab, positionOffset), 0);
+        }
     }
 
-    private void updateIndicatorLocation(int position, int nextPosition, float positionOffset) {
+    private void updateIndicatorLocation(View current, View next, float positionOffset) {
         final View indicator = mIndicator;
-        final View current = mTabGroup.getChildAt(position);
-        final View next = mTabGroup.getChildAt(nextPosition);
-
         mIndicatorDecorator.updateIndicatorLocation(indicator, current, next, positionOffset);
     }
 
     /**
      * 计算当前Tab在屏幕居中时，{@link VarietyTabLayout}需要的偏移量
      */
-    private int calculateScrollXForTab(int position, int nexIdx, float positionOffset) {
-        final View current = mTabGroup.getChildAt(position);
-        final View next = mTabGroup.getChildAt(nexIdx);
+    private int calculateScrollXForTab(View current, View next, float positionOffset) {
         final float totalOffset = current.getLeft() + current.getWidth() * positionOffset;
 
         // 当前tab的宽度，不同tab不同的宽度，当前tab会切换，所以这有变化范围
@@ -225,14 +225,13 @@ public class VarietyTabLayout extends HorizontalScrollView {
         @Override
         public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
             final int tabCount = mVarietyTabLayout.getTabGroup().getTabCount();
-            final int nextPosition = tabCount == 1 ? position : position + 1;
-            if (nextPosition < 0 || nextPosition >= tabCount) {
+            if (position < 0 || position >= tabCount) {
                 return;
             }
 
             // 用于修正滚动过程中tab偏移起始和终止值控制
             fixScrollThresholdControl(position);
-            mVarietyTabLayout.dispatchOnPageScrolled(position, nextPosition, positionOffset);
+            mVarietyTabLayout.dispatchOnPageScrolled(position, positionOffset);
         }
 
         /**
@@ -245,13 +244,13 @@ public class VarietyTabLayout extends HorizontalScrollView {
             if (lastPosition < position) { // 向右滚动
                 final int startPosition = lastPosition;
                 for (int passPos = startPosition; passPos < position; ++passPos) {
-                    mVarietyTabLayout.dispatchOnPageScrolled(passPos, passPos + 1, 1);
+                    mVarietyTabLayout.dispatchOnPageScrolled(passPos, 1);
                 }
 
             } else if (lastPosition > position) { // 向左滚动
                 final int endPosition = lastPosition;
                 for (int passPos = endPosition; passPos >= position; --passPos) {
-                    mVarietyTabLayout.dispatchOnPageScrolled(passPos, passPos + 1, 0);
+                    mVarietyTabLayout.dispatchOnPageScrolled(passPos, 0);
                 }
             }
             lastPosition = position;
