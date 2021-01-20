@@ -5,7 +5,7 @@
 - 自定义 `Tab` 样式，但是最外层的 `ViewGroup` 暂不支持 `Margin` 属性
 - 自定义 `Indicator` 样式
   <br/>
-  同时 `VarietyTabLayout 内置了几种简单的`Tab`布局和`Indicator` 样式
+  同时 `VarietyTabLayout` 内置了几种简单的`Tab`布局和`Indicator` 样式
 - `Tab` 样式
   - `TrackTabDecorator` : 文字颜色变化效果
   - `ScaleTabDecorator` : 文字缩放效果
@@ -25,7 +25,7 @@
 `VarietyTabLayout` 的使用依赖 `ViewPager` ，所以也需要加上 `ViewPager` 的依赖
 
 ```groovy
-implementation 'com.ytempest:varietytablayout:1.0'
+implementation 'com.ytempest:varietytablayout:1.1'
 ```
 
 
@@ -66,6 +66,24 @@ mVarietyTabLayout.setAdapter(new SimpleAdapter(items))
 
 最后通过 `BaseAdapter` 选择自定义的样式
 
+<br/>
+
+
+
+### 更新记录
+
+##### v1.1
+
+- 支持通过 `Adapter` 添加、更新和删除 `Tab`
+- 修正长距离跳转 `Tab` 位置时 `Tab` UI状态更新异常
+
+
+
+##### v1.0
+
+- 支持自定义 `Tab` 和 `Indicator` 样式
+- 内置 2 种 `Tab` 样式、3 种 `Indicator` 样式
+
 
 
 <br/>
@@ -74,8 +92,6 @@ mVarietyTabLayout.setAdapter(new SimpleAdapter(items))
 
 这里为内置的 `Tab` 和 `Indicator` 样式
 
-<br/>
-
-![](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/d93098e1a5994bf2a8ebda556577bb33~tplv-k3u1fbpfcp-watermark.image)<
+<br/>![](https://p1-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/d93098e1a5994bf2a8ebda556577bb33~tplv-k3u1fbpfcp-watermark.image)
 
 <br/>
