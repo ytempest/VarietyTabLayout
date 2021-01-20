@@ -31,6 +31,10 @@ public class TabGroup extends LinearLayout {
         addView(tab);
     }
 
+    public void addTabView(View tab, int index) {
+        addView(tab, index);
+    }
+
     public View getTabAt(int position) {
         return getChildAt(position);
     }
@@ -41,5 +45,9 @@ public class TabGroup extends LinearLayout {
 
     public int indexOfTab(View tab) {
         return indexOfChild(tab);
+    }
+
+    public void removeTabAt(int index) {
+        removeViewAt(index);
     }
 }

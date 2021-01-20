@@ -24,24 +24,22 @@ public class VarietyTabLayout extends HorizontalScrollView {
 
     private static final String TAG = VarietyTabLayout.class.getSimpleName();
 
+    private final LayoutInflater mInflater;
     private final FrameLayout mRootContainer;
     private final TabGroup mTabGroup;
+    private final FrameLayout mIndicatorGroup;
+    private final List<TabActionListener> mTabActionListeners;
     private View mIndicator;
     private ViewPager mViewPager;
     private TrackIndicatorPageChangeListener mPageChangeListener;
     private BaseAdapter mAdapter;
     private IIndicatorDecorator mIndicatorDecorator;
     private ITabDecorator mTabDecorator;
-    private final List<TabActionListener> mTabActionListeners;
-    private final Runnable mDefSelectTask = new Runnable() {
-        @Override
-        public void run() {
-            setSelectedTab(mSelectedPosition);
-        }
-    };
+    private TabObserver mTabObserver;
     private View.OnClickListener mTabClickListener;
     private int mSelectedPosition;
     private boolean isSmoothScroll = true;
+    private boolean isDataChanged;
 
     public VarietyTabLayout(Context context) {
         this(context, null);
@@ -53,12 +51,15 @@ public class VarietyTabLayout extends HorizontalScrollView {
 
     public VarietyTabLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-
+        mInflater = LayoutInflater.from(getContext());
         mRootContainer = new FrameLayout(context);
         addView(mRootContainer);
 
         mTabGroup = new TabGroup(context);
         mRootContainer.addView(mTabGroup);
+
+        mIndicatorGroup = new FrameLayout(context);
+        mRootContainer.addView(mIndicatorGroup, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
         mTabActionListeners = new ArrayList<>();
     }
@@ -80,6 +81,7 @@ public class VarietyTabLayout extends HorizontalScrollView {
         if (mPageChangeListener == null) {
             mPageChangeListener = new TrackIndicatorPageChangeListener(this);
         }
+        mPageChangeListener.reset();
         mViewPager.addOnPageChangeListener(mPageChangeListener);
     }
 
@@ -91,38 +93,51 @@ public class VarietyTabLayout extends HorizontalScrollView {
             throw new NullPointerException("adapter can't be null");
         }
 
+        if (mAdapter != null) {
+            mAdapter.setTabLayoutObserver(null);
+        }
+
         reset();
         this.mAdapter = adapter;
         this.mIndicatorDecorator = mAdapter.getIndicatorDecorator();
         this.mTabDecorator = mAdapter.getTabDecorator();
 
-        LayoutInflater inflater = LayoutInflater.from(getContext());
+        if (mTabObserver == null) {
+            mTabObserver = new TabObserver();
+        }
+        mAdapter.setTabLayoutObserver(mTabObserver);
+
         // 添加Tab
         final List dataList = mAdapter.getDataList();
         for (int i = 0, count = dataList.size(); i < count; i++) {
-            final View tab = mTabDecorator.createTabView(inflater, mTabGroup, i);
-            mTabDecorator.onBindTabView(tab, dataList.get(i), i);
-            setupTabClickListener(tab);
-            mTabGroup.addTabView(tab);
-        }
-        if (!dataList.isEmpty()) {
-            // 默认选中第一个
-            removeCallbacks(mDefSelectTask);
-            post(mDefSelectTask);
+            addTab(dataList.get(i), i);
         }
 
         // 添加指示器
-        this.mIndicator = mIndicatorDecorator.createIndicatorView(inflater, mRootContainer);
-        mRootContainer.addView(mIndicator);
+        this.mIndicator = mIndicatorDecorator.createIndicatorView(mInflater, mRootContainer);
+        mIndicatorGroup.addView(mIndicator);
         LayoutParams params = (LayoutParams) mIndicator.getLayoutParams();
         params.gravity = mIndicatorDecorator.getGravity();
         mIndicator.setLayoutParams(params);
+
+        setSelectedTab(mSelectedPosition);
+    }
+
+    private void addTab(Object data, int position) {
+        addTab(data, position, -1);
+    }
+
+    private void addTab(Object data, int position, int addIdx) {
+        final View tab = mTabDecorator.createTabView(mInflater, mTabGroup, position);
+        mTabDecorator.onBindTabView(tab, data, position);
+        setupTabClickListener(tab);
+        mTabGroup.addTabView(tab, addIdx);
     }
 
     private void reset() {
         mSelectedPosition = 0;
         mTabGroup.removeAllViews();
-        mRootContainer.removeView(mIndicator);
+        mIndicatorGroup.removeAllViews();
     }
 
     private void setupTabClickListener(View tab) {
@@ -179,9 +194,13 @@ public class VarietyTabLayout extends HorizontalScrollView {
             final int lastPosition = mSelectedPosition;
             mSelectedPosition = position;
 
-            for (TabActionListener listener : mTabActionListeners) {
-                listener.onTabReleaseSelect(mTabGroup.getTabAt(lastPosition), lastPosition);
+            if (lastPosition != mSelectedPosition) {
+                for (TabActionListener listener : mTabActionListeners) {
+                    listener.onTabReleaseSelect(mTabGroup.getTabAt(lastPosition), lastPosition);
+                }
+            }
 
+            for (TabActionListener listener : mTabActionListeners) {
                 listener.onTabSelected(mTabGroup.getTabAt(mSelectedPosition), mSelectedPosition);
             }
         }
@@ -225,7 +244,7 @@ public class VarietyTabLayout extends HorizontalScrollView {
         @Override
         public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
             final int tabCount = mVarietyTabLayout.getTabGroup().getTabCount();
-            if (position < 0 || position >= tabCount) {
+            if (position < 0 || position >= tabCount - 1) {
                 return;
             }
 
@@ -264,6 +283,97 @@ public class VarietyTabLayout extends HorizontalScrollView {
         @Override
         public void onPageScrollStateChanged(int state) {
         }
+
+        void reset() {
+            lastPosition = 0;
+        }
     }
 
+    /*Data observer*/
+
+    @Override
+    protected void onLayout(boolean changed, int l, int t, int r, int b) {
+        super.onLayout(changed, l, t, r, b);
+        if (isDataChanged) {
+            dispatchOnPageScrolled(mSelectedPosition - 1, 1);
+            dispatchOnPageScrolled(mSelectedPosition, 0);
+            isDataChanged = false;
+        }
+    }
+
+    private void updatePositionOnTabChanged() {
+        int tabCount = mTabGroup.getTabCount();
+        if (tabCount == 0) {
+            mSelectedPosition = 0;
+
+        } else if (mSelectedPosition >= tabCount) {
+            mSelectedPosition = tabCount - 1;
+        }
+    }
+
+    void onDataSetChanged() {
+        isDataChanged = true;
+        mTabGroup.removeAllViews();
+        final List dataList = mAdapter.getDataList();
+        for (int i = 0, size = dataList.size(); i < size; i++) {
+            addTab(dataList.get(i), i);
+        }
+
+        updatePositionOnTabChanged();
+        requestLayout();
+    }
+
+    void onDataChanged(int position) {
+        isDataChanged = true;
+        final View tab = mTabGroup.getTabAt(position);
+        final Object data = mAdapter.getData(position);
+        mTabDecorator.onBindTabView(tab, data, position);
+
+        requestLayout();
+    }
+
+    void onDataInserted(int position) {
+        isDataChanged = true;
+        final List dataList = mAdapter.getDataList();
+        final Object data = dataList.get(position);
+        addTab(data, position, position);
+
+        updatePositionOnTabChanged();
+        requestLayout();
+    }
+
+    void onDataRemoved(int position) {
+        isDataChanged = true;
+        mTabGroup.removeTabAt(position);
+
+        updatePositionOnTabChanged();
+        requestLayout();
+    }
+
+    private class TabObserver extends AdapterDataObserver {
+
+        @Override
+        public void onDataSetChanged() {
+            super.onDataSetChanged();
+            VarietyTabLayout.this.onDataSetChanged();
+        }
+
+        @Override
+        public void onItemChanged(int position) {
+            super.onItemChanged(position);
+            onDataChanged(position);
+        }
+
+        @Override
+        public void onItemInserted(int position) {
+            super.onItemInserted(position);
+            onDataInserted(position);
+        }
+
+        @Override
+        public void onItemRemoved(int position) {
+            super.onItemRemoved(position);
+            onDataRemoved(position);
+        }
+    }
 }
